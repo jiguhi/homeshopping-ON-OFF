@@ -89,9 +89,10 @@ def update_adgroup_status(adgroup_id, turn_on, api_key, secret_key, customer_id)
     )
 
     if error:
-        return False, error
+        return False, "", error
 
-    # userLock False = ON / True = OFF
+    adgroup_name = adgroup.get("name", "광고그룹명 없음")
+
     adgroup["userLock"] = not turn_on
 
     uri = f"/ncc/adgroups/{adgroup_id}"
@@ -105,9 +106,9 @@ def update_adgroup_status(adgroup_id, turn_on, api_key, secret_key, customer_id)
     )
 
     if response.status_code in [200, 204]:
-        return True, "완료"
+        return True, adgroup_name, "완료"
 
-    return False, f"PUT 실패: {response.status_code}\n{response.text}"
+    return False, adgroup_name, f"PUT 실패: {response.status_code}\n{response.text}"
 
 
 def get_status_text(adgroup_id, api_key, secret_key, customer_id):
@@ -260,7 +261,7 @@ if run_btn:
 
     for adgroup_id in adgroup_ids:
         with st.spinner(f"{adgroup_id} {action} 처리 중..."):
-            success, message = update_adgroup_status(
+            success, adgroup_name, message = update_adgroup_status(
                 adgroup_id,
                 turn_on,
                 api_key,
@@ -269,6 +270,6 @@ if run_btn:
             )
 
         if success:
-            st.success(f"{adgroup_id} → {action} 완료")
+            st.success(f"{adgroup_name} / {adgroup_id} → {action} 완료")
         else:
-            st.error(f"{adgroup_id} → {action} 실패\n\n{message}")
+            st.error(f"{adgroup_name} / {adgroup_id} → {action} 실패\n\n{message}")
