@@ -4,9 +4,40 @@ import hashlib
 import base64
 import requests
 import streamlit as st
+import json
+import os
 
 
 BASE_URL = "https://api.searchad.naver.com"
+SETTING_FILE = "settings.json"
+
+
+def load_settings():
+    if os.path.exists(SETTING_FILE):
+        try:
+            with open(SETTING_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+
+    return {
+        "api_key": "",
+        "secret_key": "",
+        "customer_id": "",
+        "adgroup_text": ""
+    }
+
+
+def save_settings(api_key, secret_key, customer_id, adgroup_text):
+    data = {
+        "api_key": api_key,
+        "secret_key": secret_key,
+        "customer_id": customer_id,
+        "adgroup_text": adgroup_text
+    }
+
+    with open(SETTING_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 
 class Signature:
@@ -60,9 +91,7 @@ def update_adgroup_status(adgroup_id, turn_on, api_key, secret_key, customer_id)
     if error:
         return False, error
 
-    # 네이버 검색광고 기준
-    # userLock = False → ON
-    # userLock = True  → OFF
+    # userLock False = ON / True = OFF
     adgroup["userLock"] = not turn_on
 
     uri = f"/ncc/adgroups/{adgroup_id}"
@@ -102,41 +131,40 @@ def get_status_text(adgroup_id, api_key, secret_key, customer_id):
         return "알 수 없음", None
 
 
-# =========================
-# Streamlit UI
-# =========================
-
 st.set_page_config(
     page_title="네이버 광고그룹 ON/OFF",
     layout="wide"
 )
 
+saved = load_settings()
+
 st.title("네이버 검색광고 광고그룹 ON/OFF")
 
-st.info("API 정보와 광고그룹 ID를 직접 입력해서 ON/OFF 처리할 수 있습니다.")
+st.info("API 정보와 광고그룹 ID를 직접 입력하면 다음 실행 시 마지막 입력값이 자동으로 불러와집니다.")
 
 with st.expander("API 정보 입력", expanded=True):
     api_key = st.text_input(
         "API KEY",
-        type="password",
-        placeholder="API KEY를 입력하세요"
+        value=saved.get("api_key", ""),
+        type="password"
     )
 
     secret_key = st.text_input(
         "SECRET KEY",
-        type="password",
-        placeholder="SECRET KEY를 입력하세요"
+        value=saved.get("secret_key", ""),
+        type="password"
     )
 
     customer_id = st.text_input(
         "CUSTOMER ID",
-        placeholder="예: 1394697"
+        value=saved.get("customer_id", "")
     )
 
 st.divider()
 
 adgroup_text = st.text_area(
     "광고그룹 ID 입력",
+    value=saved.get("adgroup_text", ""),
     height=220,
     placeholder="""한 줄에 하나씩 입력하세요.
 
@@ -188,6 +216,13 @@ def validate_inputs():
 if check_btn:
     validate_inputs()
 
+    save_settings(
+        api_key,
+        secret_key,
+        customer_id,
+        adgroup_text
+    )
+
     st.subheader("현재 상태 조회 결과")
 
     for adgroup_id in adgroup_ids:
@@ -211,6 +246,13 @@ if check_btn:
 
 if run_btn:
     validate_inputs()
+
+    save_settings(
+        api_key,
+        secret_key,
+        customer_id,
+        adgroup_text
+    )
 
     turn_on = action == "ON"
 
